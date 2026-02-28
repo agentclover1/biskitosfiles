@@ -2,64 +2,131 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Department of Baruch | Search Full Hirsch Library</title>
+<title>Hirsch Library | Released Documents</title>
 
 <style>
-body {
-    margin: 0;
-    background: #f3f3f3;
-    font-family: Georgia, serif;
-    color: #111;
+:root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
 }
 
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Header */
 .header {
-    background: #ffffff;
-    border-bottom: 1px solid #ccc;
-    padding: 20px 40px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+}
+
+.header-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px;
 }
 
 .header h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    font-weight: 600;
+}
+
+.header p {
     margin: 0;
-    font-size: 28px;
-    letter-spacing: 1px;
+    color: var(--muted);
+    font-size: 14px;
 }
 
-.search-bar {
-    padding: 10px;
-    margin: 20px;
-    border-radius: 5px;
-    width: 95%;
-    font-size: 16px;
+/* Main content */
+.main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
 }
 
-.container {
-    padding: 40px;
-    max-width: 900px;
+/* Search */
+.search {
+    margin-bottom: 28px;
+}
+
+.search input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    outline: none;
+    background: var(--card);
+}
+
+.search input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* File list */
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .file {
-    margin-bottom: 50px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.filename {
-    font-size: 20px;
-    font-weight: bold;
+.file:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 
-.filename a {
+.file-name {
+    font-size: 15px;
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.file-name a {
+    color: var(--text);
     text-decoration: none;
-    color: #1a0dab;
 }
 
-.filename a:hover {
+.file-name a:hover {
     text-decoration: underline;
 }
 
-.preview {
-    margin-top: 12px;
-    color: #444;
-    line-height: 1.5;
-    font-size: 15px;
+.file-meta {
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+/* Empty state */
+.empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 48px 0;
+    font-size: 14px;
 }
 </style>
 </head>
@@ -67,151 +134,68 @@ body {
 <body>
 
 <div class="header">
-    <h1>Released Documents (Disclaimer: All Satire)</h1>
+    <div class="header-inner">
+        <h1>Released Documents</h1>
+        <p>Hirsch Library · Public Access Archive · Satirical Material</p>
+    </div>
 </div>
 
-<input
-    type="text"
-    class="search-bar"
-    id="searchBar"
-    placeholder="Search for words in summaries..."
-    onkeyup="filterFiles()"
-/>
+<div class="main">
 
-<div class="container" id="fileList">
-    Loading...
+    <div class="search">
+        <input
+            type="text"
+            id="searchBar"
+            placeholder="Search documents by filename…"
+            onkeyup="filterFiles()"
+        />
+    </div>
+
+    <div class="file-list" id="fileList">
+        Loading…
+    </div>
+
 </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <script>
-let fileData = [];
+let allFiles = [];
 
 async function loadFiles() {
     const response = await fetch("files.json");
-    const files = await response.json();
+    allFiles = await response.json();
+    renderFiles(allFiles);
+}
 
-    fileData = [];
-    const container = document.getElementById("fileList");
-    container.innerHTML = "";
+function renderFiles(files) {
+    const list = document.getElementById("fileList");
+    list.innerHTML = "";
 
-    for (let file of files) {
+    if (files.length === 0) {
+        list.innerHTML = `<div class="empty">No documents found.</div>`;
+        return;
+    }
+
+    files.forEach(file => {
         const div = document.createElement("div");
         div.className = "file";
 
-        const ext = file.split(".").pop().toLowerCase();
-        let previewHTML = "";
-
-        if (ext === "pdf") {
-            previewHTML = `<div class="preview" id="preview-${file}">Loading preview...</div>`;
-        }
-
         div.innerHTML = `
-            <div class="filename">
+            <div class="file-name">
                 <a href="files/${file}" target="_blank">${file}</a>
             </div>
-            ${previewHTML}
+            <div class="file-meta">PDF</div>
         `;
 
-        container.appendChild(div);
-        fileData.push({ name: file, preview: "" });
-
-        if (ext === "pdf") {
-            extractFirstParagraph(file);
-        }
-    }
-}
-
-async function extractFirstParagraph(file) {
-    const url = `files/${file}`;
-    const pdf = await pdfjsLib.getDocument(url).promise;
-    const page = await pdf.getPage(1);
-
-    const textContent = await page.getTextContent();
-    const annotations = await page.getAnnotations();
-
-    // Collect highlight rectangles from annotations
-    const highlightRects = annotations
-        .filter(a => a.subtype === "Highlight" && a.quadPoints)
-        .flatMap(a => {
-            const rects = [];
-            for (let i = 0; i < a.quadPoints.length; i += 8) {
-                rects.push({
-                    x1: a.quadPoints[i],
-                    y1: a.quadPoints[i + 1],
-                    x2: a.quadPoints[i + 4],
-                    y2: a.quadPoints[i + 5]
-                });
-            }
-            return rects;
-        });
-
-    function isHighlighted(item) {
-        if (!item.transform) return false;
-        const [, , , , x, y] = item.transform;
-
-        return highlightRects.some(r =>
-            x >= r.x1 && x <= r.x2 &&
-            y <= r.y1 && y >= r.y2
-        );
-    }
-
-    let html = "";
-
-    for (let item of textContent.items) {
-        let styles = [];
-        const fontName = item.fontName?.toLowerCase() || "";
-
-        if (fontName.includes("bold")) {
-            styles.push("font-weight:bold");
-        }
-
-        if (fontName.includes("italic") || fontName.includes("oblique")) {
-            styles.push("font-style:italic");
-        }
-
-        if (isHighlighted(item)) {
-            styles.push("background:#fff59d");
-        }
-
-        if (styles.length > 0) {
-            html += `<span style="${styles.join(";")}">${item.str}</span> `;
-        } else {
-            html += item.str + " ";
-        }
-    }
-
-    html = html.trim();
-
-    const previewEl = document.getElementById(`preview-${file}`);
-    previewEl.innerHTML = html;
-
-    // Store plain text for searching
-    const plainText = html.replace(/<[^>]+>/g, "");
-    fileData.find(f => f.name === file).preview = plainText;
+        list.appendChild(div);
+    });
 }
 
 function filterFiles() {
-    const searchQuery = document.getElementById("searchBar").value.toLowerCase();
-    const container = document.getElementById("fileList");
-
-    container.innerHTML = "";
-
-    fileData.forEach(file => {
-        if (file.preview.toLowerCase().includes(searchQuery)) {
-            const div = document.createElement("div");
-            div.className = "file";
-
-            div.innerHTML = `
-                <div class="filename">
-                    <a href="files/${file.name}" target="_blank">${file.name}</a>
-                </div>
-                <div class="preview">${file.preview}</div>
-            `;
-
-            container.appendChild(div);
-        }
-    });
+    const query = document.getElementById("searchBar").value.toLowerCase();
+    const filtered = allFiles.filter(f =>
+        f.toLowerCase().includes(query)
+    );
+    renderFiles(filtered);
 }
 
 loadFiles();
