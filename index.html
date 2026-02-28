@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <title>Biscuit-o's Files | Released Documents</title>
 
-<!-- Favicon -->
-<link rel="icon" href="https://ibb.co/93kMHybK">
+<!-- Favicon from repo root -->
+<link rel="icon" href="/favicon.png">
 
 <style>
 :root {
@@ -17,9 +17,7 @@
     --accent: #2563eb;
 }
 
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
     margin: 0;
@@ -30,9 +28,26 @@ body {
     transition: transform 1s ease-in-out;
 }
 
-/* Spin animation */
+/* Spin */
 body.spin {
     transform: rotate(360deg);
+}
+
+/* Lock screen */
+.locked {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+}
+
+.locked h1 {
+    font-size: 28px;
+}
+
+.locked p {
+    color: var(--muted);
 }
 
 /* Header */
@@ -67,27 +82,24 @@ body.spin {
 }
 
 /* Search */
-.search {
-    margin-bottom: 28px;
-}
-
 .search input {
     width: 100%;
     padding: 14px 16px;
     font-size: 15px;
     border-radius: 10px;
     border: 1px solid var(--border);
-    outline: none;
     background: var(--card);
 }
 
 .search input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    outline: none;
 }
 
-/* File list */
+/* Files */
 .file-list {
+    margin-top: 28px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -99,51 +111,42 @@ body.spin {
     border-radius: 12px;
     padding: 18px 20px;
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: 0.15s ease;
 }
 
 .file:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-}
-
-/* Filename */
-.file-name {
-    font-size: 15px;
-    font-weight: 500;
-    word-break: break-all;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
 
 .file-name a {
-    color: var(--text);
     text-decoration: none;
-    transition: color 0.15s ease;
+    color: var(--text);
+    font-weight: 500;
 }
 
-/* Hover turns blue */
 .file:hover .file-name a {
     color: var(--accent);
 }
 
 .file-meta {
-    font-size: 13px;
     color: var(--muted);
-    white-space: nowrap;
+    font-size: 13px;
 }
 
-/* Empty state */
+/* Empty */
 .empty {
     text-align: center;
     color: var(--muted);
     padding: 48px 0;
-    font-size: 14px;
 }
 </style>
 </head>
 
 <body>
+
+<div id="app">
 
 <div class="header">
     <div class="header-inner">
@@ -153,37 +156,54 @@ body.spin {
 </div>
 
 <div class="main">
-
     <div class="search">
-        <input
-            type="text"
-            id="searchBar"
-            placeholder="Search documents by filename…"
-            onkeyup="filterFiles()"
-        />
+        <input id="searchBar" placeholder="Search documents…" onkeyup="filterFiles()">
     </div>
 
-    <div class="file-list" id="fileList">
-        Loading…
-    </div>
+    <div class="file-list" id="fileList">Loading…</div>
+</div>
 
 </div>
 
 <script>
+const LOCK_KEY = "site_lock_until";
+const EXEMPT_KEY = "lock_exempt";
+const LOCK_DURATION = 15 * 60 * 1000;
+
 let allFiles = [];
-let easterEggUsed = false;
+
+/* Lock check */
+(function checkLock() {
+    const lockUntil = localStorage.getItem(LOCK_KEY);
+    const exempt = localStorage.getItem(EXEMPT_KEY);
+
+    if (lockUntil && Date.now() < lockUntil && !exempt) {
+        document.body.innerHTML = `
+            <div class="locked">
+                <div>
+                    <h1>Site Temporarily Locked</h1>
+                    <p>Please try again later.</p>
+                </div>
+            </div>
+        `;
+    }
+})();
 
 async function loadFiles() {
-    const response = await fetch("files.json");
-    allFiles = await response.json();
+    const res = await fetch("files.json");
+    allFiles = await res.json();
     renderFiles(allFiles);
+}
+
+function getExtension(file) {
+    return file.split(".").pop().toUpperCase();
 }
 
 function renderFiles(files) {
     const list = document.getElementById("fileList");
     list.innerHTML = "";
 
-    if (files.length === 0) {
+    if (!files.length) {
         list.innerHTML = `<div class="empty">No documents found.</div>`;
         return;
     }
@@ -196,7 +216,7 @@ function renderFiles(files) {
             <div class="file-name">
                 <a href="files/${file}" target="_blank">${file}</a>
             </div>
-            <div class="file-meta">PDF</div>
+            <div class="file-meta">${getExtension(file)}</div>
         `;
 
         list.appendChild(div);
@@ -204,26 +224,25 @@ function renderFiles(files) {
 }
 
 function filterFiles() {
-    const query = document.getElementById("searchBar").value.toLowerCase();
-    const filtered = allFiles.filter(f =>
-        f.toLowerCase().includes(query)
-    );
-    renderFiles(filtered);
+    const q = searchBar.value.toLowerCase();
+    renderFiles(allFiles.filter(f => f.toLowerCase().includes(q)));
 }
 
-/* CTRL + G Easter Egg */
-document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.key.toLowerCase() === "g" && !easterEggUsed) {
+/* CTRL + G */
+document.addEventListener("keydown", e => {
+    if (e.ctrlKey && e.key.toLowerCase() === "g") {
         e.preventDefault();
-
         const input = prompt("Enter access phrase:");
-        if (input === "aidenfilesontop") {
-            easterEggUsed = true;
-            document.body.classList.add("spin");
 
-            setTimeout(() => {
-                document.body.classList.remove("spin");
-            }, 1000);
+        if (input === "aidenfilesontop") {
+            document.body.classList.add("spin");
+            setTimeout(() => document.body.classList.remove("spin"), 1000);
+        }
+
+        if (input === "3214321422222222iiiiiiii") {
+            localStorage.setItem(LOCK_KEY, Date.now() + LOCK_DURATION);
+            localStorage.setItem(EXEMPT_KEY, "true");
+            alert("Lockdown initiated for 15 minutes.");
         }
     }
 });
